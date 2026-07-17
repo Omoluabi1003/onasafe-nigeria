@@ -22,12 +22,16 @@ jobs:
         run: |
           python -m pip install --quiet --upgrade pip
           pip install --quiet -r requirements.txt pip-audit
-      - name: Dependency security audit
+      - name: Generate dependency security evidence
+        run: pip-audit -r requirements.txt --format json > pip-audit.json || true
+      - name: Upload dependency security evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dependency-audit
+          path: pip-audit.json
+          retention-days: 14
+      - name: Enforce dependency security gate
         run: |
-          set +e
-          pip-audit -r requirements.txt --format json > pip-audit.json
-          audit_exit=$?
-          set -e
           python - <<'PY'
           import json
           from pathlib import Path
@@ -44,7 +48,6 @@ jobs:
               raise SystemExit(1)
           print('No known Python dependency vulnerabilities found.')
           PY
-          exit "$audit_exit"
       - name: API contract tests
         run: pytest -q
       - name: Static application contract
