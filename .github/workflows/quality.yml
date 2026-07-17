@@ -20,13 +20,30 @@ jobs:
           cache: pip
       - name: Install application and audit dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pip-audit
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r requirements.txt pip-audit
+      - name: Dependency security audit
+        run: |
+          pip-audit -r requirements.txt --format json | tee pip-audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('pip-audit.json').read_text())
+          vulnerabilities = [
+              (dependency['name'], dependency['version'], vulnerability['id'], vulnerability.get('fix_versions', []))
+              for dependency in payload.get('dependencies', [])
+              for vulnerability in dependency.get('vulns', [])
+          ]
+          if vulnerabilities:
+              for name, version, advisory, fixes in vulnerabilities:
+                  print(f'VULNERABLE {name} {version} {advisory} fixes={fixes}')
+              raise SystemExit(1)
+          print('No known Python dependency vulnerabilities found.')
+          PY
       - name: API contract tests
         run: pytest -q
       - name: Static application contract
         run: python scripts/validate_static.py
       - name: JavaScript syntax
         run: node --check app.js
-      - name: Dependency security audit
-        run: pip-audit -r requirements.txt
