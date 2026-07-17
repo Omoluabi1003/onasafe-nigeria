@@ -52,8 +52,8 @@ def main() -> None:
 
     ids: set[str] = set()
     for feature in features:
-        props = feature.get("properties", {})
-        geometry = feature.get("geometry", {})
+        props = feature.get("properties") or {}
+        geometry = feature.get("geometry") or {}
         coordinates = geometry.get("coordinates", [])
         require(geometry.get("type") == "Point" and len(coordinates) == 2, "Every incident must be a Point")
         longitude, latitude = coordinates
