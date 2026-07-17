@@ -8,8 +8,10 @@ const ui = {};
 let map;
 let corridorLayer;
 let fatalityLayer;
+let actualPointLayer;
 let fatalRecords = [];
 let activeTime = 'all';
+let activeBins = [];
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -47,33 +49,29 @@ function buildRouteMeasure() {
 
 const routeMeasure = buildRouteMeasure();
 
-function pointAtDistance(distanceKm) {
-  const target = Math.max(0, Math.min(distanceKm, routeMeasure.totalKm));
-  for (let index = 1; index < routeMeasure.cumulative.length; index += 1) {
-    const segmentEnd = routeMeasure.cumulative[index];
-    if (target <= segmentEnd) {
-      const segmentStart = routeMeasure.cumulative[index - 1];
-      const ratio = segmentEnd === segmentStart ? 0 : (target - segmentStart) / (segmentEnd - segmentStart);
-      const start = corridorCoordinates[index - 1];
-      const end = corridorCoordinates[index];
-      return [start[0] + ((end[0] - start[0]) * ratio), start[1] + ((end[1] - start[1]) * ratio)];
+function projectRecordToRoute(record) {
+  const point = { x: record.longitude, y: record.latitude };
+  let best = { distanceKm: Number.POSITIVE_INFINITY, routeKm: 0 };
+
+  for (let index = 1; index < corridorCoordinates.length; index += 1) {
+    const start = { x: corridorCoordinates[index - 1][1], y: corridorCoordinates[index - 1][0] };
+    const end = { x: corridorCoordinates[index][1], y: corridorCoordinates[index][0] };
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const lengthSquared = (dx * dx) + (dy * dy);
+    const rawT = lengthSquared === 0 ? 0 : (((point.x - start.x) * dx) + ((point.y - start.y) * dy)) / lengthSquared;
+    const t = Math.max(0, Math.min(1, rawT));
+    const projected = { x: start.x + (dx * t), y: start.y + (dy * t) };
+    const crossTrackKm = haversineKm([point.y, point.x], [projected.y, projected.x]);
+    if (crossTrackKm < best.distanceKm) {
+      const segmentKm = routeMeasure.cumulative[index] - routeMeasure.cumulative[index - 1];
+      best = {
+        distanceKm: crossTrackKm,
+        routeKm: routeMeasure.cumulative[index - 1] + (segmentKm * t)
+      };
     }
   }
-  return corridorCoordinates.at(-1);
-}
-
-function approximateRoadDistance(record) {
-  const point = [record.latitude, record.longitude];
-  let nearestIndex = 0;
-  let nearestDistance = Number.POSITIVE_INFINITY;
-  corridorCoordinates.forEach((coordinate, index) => {
-    const distance = haversineKm(point, coordinate);
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearestIndex = index;
-    }
-  });
-  return routeMeasure.cumulative[nearestIndex];
+  return best.routeKm;
 }
 
 function normalizeRecord(feature) {
@@ -130,22 +128,74 @@ function groupIntoBins(records, binSizeKm) {
     if (!bins.has(binIndex)) bins.set(binIndex, []);
     bins.get(binIndex).push(record);
   });
-  return [...bins.entries()].map(([binIndex, items]) => ({
-    binIndex,
-    items,
-    midpointKm: Math.min((binIndex * binSizeKm) + (binSizeKm / 2), routeMeasure.totalKm)
-  }));
+  return [...bins.entries()]
+    .map(([binIndex, items]) => ({
+      binIndex,
+      items,
+      startKm: binIndex * binSizeKm,
+      endKm: Math.min((binIndex + 1) * binSizeKm, routeMeasure.totalKm),
+      latitude: items.reduce((sum, item) => sum + item.latitude, 0) / items.length,
+      longitude: items.reduce((sum, item) => sum + item.longitude, 0) / items.length
+    }))
+    .sort((a, b) => a.startKm - b.startKm);
 }
 
 function humanFigures(count) {
-  return Array.from({ length: count }, () => '<span class="human-figure" aria-hidden="true"></span>').join('');
+  return Array.from({ length: count }, (_, index) => `<span class="human-figure" style="animation-delay:${index * 120}ms" aria-hidden="true"></span>`).join('');
 }
 
-function binPopup(bin, binSizeKm) {
-  const startKm = bin.binIndex * binSizeKm;
-  const endKm = Math.min(startKm + binSizeKm, routeMeasure.totalKm);
+function binPopup(bin) {
   const records = bin.items.map(record => `<li>${escapeHtml(record.location)} · ${escapeHtml(record.captured_at.slice(0, 10))} · ${escapeHtml(record.provenance)}</li>`).join('');
-  return `<strong>${bin.items.length} simulated ${bin.items.length === 1 ? 'death' : 'deaths'}</strong><p>Approx. road segment ${startKm.toFixed(0)}–${endKm.toFixed(0)} km</p><ul>${records}</ul>`;
+  return `<strong>${bin.items.length} simulated ${bin.items.length === 1 ? 'death' : 'deaths'}</strong><p>Approx. road segment ${bin.startKm.toFixed(0)}–${bin.endKm.toFixed(0)} km</p><ul>${records}</ul>`;
+}
+
+function renderActualPoints(records) {
+  actualPointLayer.clearLayers();
+  records.forEach(record => {
+    L.circleMarker([record.latitude, record.longitude], {
+      radius: 5,
+      color: '#ffffff',
+      weight: 2,
+      fillColor: '#75336f',
+      fillOpacity: .95
+    }).bindTooltip(escapeHtml(record.location) + " · " + escapeHtml(record.captured_at.slice(0, 10)), { direction: "top" }).addTo(actualPointLayer);
+  });
+}
+
+function renderSegmentSummary(bins) {
+  ui.segmentTotal.textContent = bins.length;
+  if (!bins.length) {
+    ui.segmentList.innerHTML = '<div class="segment-empty">No occupied road segments for this selection.</div>';
+    return;
+  }
+
+  const maximum = Math.max(...bins.map(bin => bin.items.length));
+  ui.segmentList.innerHTML = [...bins]
+    .sort((a, b) => b.items.length - a.items.length || a.startKm - b.startKm)
+    .map(bin => `
+      <button class="segment-row" type="button" data-bin="${bin.binIndex}">
+        <span class="segment-km">${bin.startKm.toFixed(0)}–${bin.endKm.toFixed(0)} km</span>
+        <span class="segment-bar"><i style="width:${Math.max(18, (bin.items.length / maximum) * 100)}%"></i></span>
+        <strong>${bin.items.length}</strong>
+      </button>
+    `).join('');
+
+  ui.segmentList.querySelectorAll('.segment-row').forEach(button => {
+    button.addEventListener('click', () => {
+      const bin = activeBins.find(candidate => String(candidate.binIndex) === button.dataset.bin);
+      if (!bin) return;
+      map.flyTo([bin.latitude, bin.longitude], 12, { duration: .6 });
+    });
+  });
+}
+
+function updateVisibleSummary(records, bins) {
+  ui.displayedDeaths.textContent = records.length;
+  ui.occupiedBins.textContent = bins.length;
+  const dayCount = records.filter(record => timeFor(record) === 'day').length;
+  ui.dayCount.textContent = dayCount;
+  ui.nightCount.textContent = records.length - dayCount;
+  ui.mapEmptyState.hidden = records.length !== 0;
 }
 
 function renderDensity() {
@@ -153,21 +203,25 @@ function renderDensity() {
   const binSizeKm = Number(ui.binSlider.value);
   const records = filteredFatalities();
   const bins = groupIntoBins(records, binSizeKm);
+  activeBins = bins;
+
+  renderActualPoints(records);
 
   bins.forEach(bin => {
-    const coordinate = pointAtDistance(bin.midpointKm);
     const icon = L.divIcon({
       className: 'fatality-bin',
-      html: `<div class="fatality-stack" role="img" aria-label="${bin.items.length} simulated ${bin.items.length === 1 ? 'death' : 'deaths'} in this road segment"><div class="bin-label">${bin.items.length}</div>${humanFigures(bin.items.length)}</div>`,
+      html: `<div class="fatality-stack" role="img" aria-label="${bin.items.length} simulated ${bin.items.length === 1 ? 'death' : 'deaths'} in this road segment"><div class="bin-label">${bin.items.length}</div>${humanFigures(bin.items.length)}<span class="bin-stem" aria-hidden="true"></span></div>`,
       iconSize: [1, 1],
       iconAnchor: [0, 0]
     });
-    L.marker(coordinate, { icon, keyboard: true })
-      .bindPopup(binPopup(bin, binSizeKm), { maxWidth: 320 })
+    L.marker([bin.latitude, bin.longitude], { icon, keyboard: true, riseOnHover: true })
+      .bindPopup(binPopup(bin), { maxWidth: 320 })
       .addTo(fatalityLayer);
   });
 
-  setStatus(`${records.length} simulated fatal ${records.length === 1 ? 'record' : 'records'} displayed in ${bins.length} road ${bins.length === 1 ? 'bin' : 'bins'}.`, 'success');
+  updateVisibleSummary(records, bins);
+  renderSegmentSummary(bins);
+  setStatus(`${records.length} simulated fatal ${records.length === 1 ? 'record' : 'records'} displayed across ${bins.length} occupied road ${bins.length === 1 ? 'segment' : 'segments'}.`, records.length ? 'success' : 'info');
 }
 
 function updateCounts() {
@@ -185,7 +239,7 @@ async function loadData() {
   fatalRecords = geojson.features
     .map(normalizeRecord)
     .filter(record => record && record.severity === 'fatal')
-    .map(record => ({ ...record, road_distance_km: approximateRoadDistance(record) }));
+    .map(record => ({ ...record, road_distance_km: projectRecordToRoute(record) }));
 
   updateCounts();
   renderDensity();
@@ -223,7 +277,14 @@ function bindEvents() {
       renderDensity();
     });
   });
-  ui.drawerToggle.addEventListener('click', () => ui.drawer.classList.toggle('closed'));
+  ui.drawerToggle.addEventListener('click', () => {
+    ui.drawer.classList.toggle('closed');
+  });
+  ui.drawer.addEventListener('transitionend', event => {
+    if (event.propertyName === 'transform') {
+      map.invalidateSize();
+    }
+  });
   ui.methodBtn.addEventListener('click', () => ui.methodDialog.showModal());
 }
 
@@ -240,7 +301,14 @@ function boot() {
     drawerToggle: document.getElementById('drawerToggle'),
     drawer: document.querySelector('.control-drawer'),
     methodBtn: document.getElementById('methodBtn'),
-    methodDialog: document.getElementById('methodDialog')
+    methodDialog: document.getElementById('methodDialog'),
+    displayedDeaths: document.getElementById('displayedDeaths'),
+    occupiedBins: document.getElementById('occupiedBins'),
+    dayCount: document.getElementById('dayCount'),
+    nightCount: document.getElementById('nightCount'),
+    segmentTotal: document.getElementById('segmentTotal'),
+    segmentList: document.getElementById('segmentList'),
+    mapEmptyState: document.getElementById('mapEmptyState')
   });
 
   if (!window.L) {
@@ -256,9 +324,10 @@ function boot() {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  L.polyline(corridorCoordinates, { color: '#ffffff', weight: 10, opacity: .9 }).addTo(map);
-  corridorLayer = L.polyline(corridorCoordinates, { color: '#75336f', weight: 6, opacity: .95 }).addTo(map);
+  L.polyline(corridorCoordinates, { color: '#ffffff', weight: 11, opacity: .92 }).addTo(map);
+  corridorLayer = L.polyline(corridorCoordinates, { color: '#75336f', weight: 6, opacity: .96 }).addTo(map);
   corridorLayer.bindTooltip('Lagos–Ibadan Expressway · simulated pilot corridor', { sticky: true });
+  actualPointLayer = L.layerGroup().addTo(map);
   fatalityLayer = L.layerGroup().addTo(map);
   map.fitBounds(corridorLayer.getBounds(), { padding: [70, 70] });
 

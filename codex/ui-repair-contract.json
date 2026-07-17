@@ -1,0 +1,47 @@
+{
+  "task": "Repair the road fatality density explorer without product drift",
+  "authority": "Project Architect feedback from supplied screenshots",
+  "branch": "feature/opencrashmap-road-density",
+  "required_changes": {
+    "wordmark": {
+      "text": "Ọ̀nàSafe Nigeria",
+      "rule": "Render the full product name as one continuous non-breaking wordmark with a Yoruba-capable system font. The initial Ọ̀ must not appear detached from nàSafe."
+    },
+    "attribution": {
+      "remove": [
+        "Inspired by the verified OpenCrashMap visual reference.",
+        "No unverified features are implied."
+      ],
+      "retain": [
+        "Developed by ETL GIS Consulting LLC.",
+        "GeoAware Core governed"
+      ],
+      "rule": "OpenCrashMap is an internal benchmark, not public-facing promotional copy."
+    },
+    "data_visibility": {
+      "rule": "The map must visibly communicate the data immediately after load.",
+      "requirements": [
+        "Render one human figure for every accepted simulated fatal record.",
+        "Position figures from their actual GeoJSON coordinates, then group only when the selected bin creates a true shared segment.",
+        "Show dynamic totals for displayed deaths, occupied bins, daytime records, and nighttime records.",
+        "Show a ranked visible-segment summary derived from the active filters.",
+        "Use subtle entrance and pulse animation while respecting prefers-reduced-motion.",
+        "Show a clear empty state when filters return zero records."
+      ]
+    },
+    "geoaware_constraints": [
+      "Do not create, estimate, multiply, or interpolate deaths.",
+      "Accept only fatal records with provenance, simulated verification, positive coordinate accuracy, and captured timestamp.",
+      "Keep FRSC 122 visible.",
+      "Keep the simulation warning visible.",
+      "Do not change the operations API or product passport."
+    ]
+  },
+  "acceptance_tests": [
+    "The title reads visually as Ọ̀nàSafe Nigeria without a gap after Ọ̀.",
+    "No public-facing OpenCrashMap attribution remains in index.html.",
+    "The initial map renders visible figures and non-zero summary metrics when the dataset loads.",
+    "Changing period, time, or bin size updates figures, totals, and segment summary.",
+    "JavaScript syntax, static contract, API tests, and dependency audit pass."
+  ]
+}
