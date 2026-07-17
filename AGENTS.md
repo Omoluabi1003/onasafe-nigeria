@@ -18,3 +18,5 @@ Think in **YCOMBINATOR Mode**. Execute in **GeoAware 80/20 Mode**.
 6. Keep the public web surface and restricted operational API as explicit system boundaries.
 7. Record durable architecture or deployment decisions in `docs/adr/`.
 8. Human Project Architect approval remains the final product-identity gate.
+9. Treat `https://opencrashmap.org/` as the primary inspiration benchmark for Ọ̀nàSafe. Do not invent, infer, or claim reference features that have not been directly observed or explicitly approved by the Project Architect.
+10. Preserve Ọ̀nàSafe’s Nigeria-specific identity, GeoAware governance, privacy rules, and emergency-response boundaries when adapting any verified reference pattern.
