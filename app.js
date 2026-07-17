@@ -55,12 +55,14 @@ function saveLocalReports(reports) {
 
 function normalizeIncident(item) {
   const capturedAt = item.captured_at || item.capturedAt || null;
+  const coordinateAccuracy = Number(item.coordinate_accuracy_m);
   return {
     ...item,
     date: item.date || (typeof capturedAt === 'string' ? capturedAt.slice(0, 10) : 'Unknown date'),
     captured_at: capturedAt,
-    coordinate_accuracy_m: Number.isFinite(Number(item.coordinate_accuracy_m))
-      ? Number(item.coordinate_accuracy_m)
+    provenance: item.provenance || null,
+    coordinate_accuracy_m: Number.isFinite(coordinateAccuracy) && coordinateAccuracy > 0
+      ? coordinateAccuracy
       : null
   };
 }
@@ -81,7 +83,7 @@ async function loadData() {
     }));
 
     incidentData = [...loadLocalReports().map(normalizeIncident), ...demoRecords]
-      .filter(item => coordinatesFor(item));
+      .filter(item => coordinatesFor(item) && item.coordinate_accuracy_m && item.provenance);
     applyFilters();
     setStatus('Map ready. Demonstration incidents are simulated and clearly labelled.', 'success');
   } catch (error) {
@@ -115,10 +117,11 @@ function popupHtml(item) {
   const accuracy = item.coordinate_accuracy_m
     ? ` · ±${escapeHtml(Math.round(item.coordinate_accuracy_m))} m`
     : '';
+  const provenance = item.provenance ? ` · ${escapeHtml(item.provenance)}` : '';
   return `
     <h3 class="popup-title">${escapeHtml(item.location)}</h3>
     <p class="popup-copy">${escapeHtml(item.description)}</p>
-    <div class="popup-meta"><strong>${escapeHtml(item.severity.toUpperCase())}</strong> · ${escapeHtml(item.date)} · ${escapeHtml(item.id)}${accuracy}</div>
+    <div class="popup-meta"><strong>${escapeHtml(item.severity.toUpperCase())}</strong> · ${escapeHtml(item.date)} · ${escapeHtml(item.id)}${accuracy}${provenance}</div>
   `;
 }
 
@@ -288,6 +291,10 @@ function bindEvents() {
       ui.formMessage.textContent = 'Complete the location, severity, and description fields.';
       return;
     }
+    if (!Number.isFinite(accuracy) || accuracy <= 0) {
+      ui.formMessage.textContent = 'Coordinate accuracy is required. Capture your location or enter a positive accuracy estimate.';
+      return;
+    }
 
     const capturedAt = capturedAtValue || new Date().toISOString();
     const report = normalizeIncident({
@@ -297,10 +304,11 @@ function bindEvents() {
       date: capturedAt.slice(0, 10),
       cause: 'Community-submitted prototype report',
       verification: 'pending',
+      provenance: 'browser_local_report',
       description,
       latitude,
       longitude,
-      coordinate_accuracy_m: Number.isFinite(accuracy) && accuracy > 0 ? accuracy : null,
+      coordinate_accuracy_m: accuracy,
       captured_at: capturedAt
     });
 
