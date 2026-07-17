@@ -6,36 +6,15 @@ const corridorCoordinates = [
 const severityWeight = { fatal: 10, serious: 6, minor: 2 };
 const severityColor = { fatal: '#c93f3f', serious: '#e7852c', minor: '#2774ae' };
 
-const map = L.map('map', { zoomControl: false }).setView([6.95, 3.63], 9);
-L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-const corridorLayer = L.polyline(corridorCoordinates, {
-  color: '#10504e', weight: 7, opacity: 0.83, lineCap: 'round'
-}).addTo(map);
-
-corridorLayer.bindTooltip('Lagos–Ibadan pilot corridor', { sticky: true });
-
-const markerLayer = L.layerGroup().addTo(map);
+let map;
+let corridorLayer;
+let markerLayer;
+let userMarker = null;
 let incidentData = [];
 let markerIndex = new Map();
 let activeIncidentId = null;
-let userMarker = null;
 
-const visibleCount = document.getElementById('visibleCount');
-const incidentList = document.getElementById('incidentList');
-const searchInput = document.getElementById('searchInput');
-const verificationFilter = document.getElementById('verificationFilter');
-const riskScore = document.getElementById('riskScore');
-const riskFill = document.getElementById('riskFill');
-const riskNarrative = document.getElementById('riskNarrative');
-const reportDialog = document.getElementById('reportDialog');
-const reportForm = document.getElementById('reportForm');
-const formMessage = document.getElementById('formMessage');
+const ui = {};
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -46,9 +25,25 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+function setStatus(message, tone = 'info') {
+  if (!ui.appStatus) return;
+  ui.appStatus.textContent = message;
+  ui.appStatus.dataset.tone = tone;
+  ui.appStatus.hidden = !message;
+}
+
+function coordinatesFor(item) {
+  const latitude = Number(item?.latitude);
+  const longitude = Number(item?.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < 4.0 || latitude > 14.5 || longitude < 2.0 || longitude > 15.0) return null;
+  return [latitude, longitude];
+}
+
 function loadLocalReports() {
   try {
-    return JSON.parse(localStorage.getItem('onasafeReports') || '[]');
+    const reports = JSON.parse(localStorage.getItem('onasafeReports') || '[]');
+    return Array.isArray(reports) ? reports : [];
   } catch {
     return [];
   }
@@ -58,20 +53,42 @@ function saveLocalReports(reports) {
   localStorage.setItem('onasafeReports', JSON.stringify(reports));
 }
 
+function normalizeIncident(item) {
+  const capturedAt = item.captured_at || item.capturedAt || null;
+  const coordinateAccuracy = Number(item.coordinate_accuracy_m);
+  return {
+    ...item,
+    date: item.date || (typeof capturedAt === 'string' ? capturedAt.slice(0, 10) : 'Unknown date'),
+    captured_at: capturedAt,
+    provenance: item.provenance || null,
+    coordinate_accuracy_m: Number.isFinite(coordinateAccuracy) && coordinateAccuracy > 0
+      ? coordinateAccuracy
+      : null
+  };
+}
+
 async function loadData() {
   try {
-    const response = await fetch('data/demo-crashes.geojson');
-    if (!response.ok) throw new Error('Unable to load demo data.');
+    const response = await fetch('data/demo-crashes.geojson', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Unable to load the corridor demonstration data.');
     const geojson = await response.json();
-    const demoRecords = geojson.features.map(feature => ({
+    if (!Array.isArray(geojson.features)) throw new Error('The corridor dataset is not valid GeoJSON.');
+
+    const demoRecords = geojson.features
+      .filter(feature => feature && feature.properties)
+      .map(feature => normalizeIncident({
       ...feature.properties,
-      latitude: feature.geometry.coordinates[1],
-      longitude: feature.geometry.coordinates[0]
+      latitude: feature.geometry?.coordinates?.[1],
+      longitude: feature.geometry?.coordinates?.[0]
     }));
-    incidentData = [...loadLocalReports(), ...demoRecords];
+
+    incidentData = [...loadLocalReports().map(normalizeIncident), ...demoRecords]
+      .filter(item => coordinatesFor(item) && item.coordinate_accuracy_m && item.provenance);
     applyFilters();
+    setStatus('Map ready. Demonstration incidents are simulated and clearly labelled.', 'success');
   } catch (error) {
-    incidentList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)} Open this prototype through a local web server rather than directly from the file system.</div>`;
+    ui.incidentList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    setStatus(error.message, 'error');
   }
 }
 
@@ -81,15 +98,14 @@ function selectedSeverities() {
 
 function getFilteredData() {
   const severities = selectedSeverities();
-  const search = searchInput.value.trim().toLowerCase();
-  const verification = verificationFilter.value;
+  const search = ui.searchInput.value.trim().toLowerCase();
+  const verification = ui.verificationFilter.value;
 
   return incidentData.filter(item => {
     const severityMatch = severities.includes(item.severity);
     const verificationMatch = verification === 'all' || item.verification === verification;
-    const haystack = `${item.id} ${item.location} ${item.cause} ${item.description}`.toLowerCase();
-    const searchMatch = !search || haystack.includes(search);
-    return severityMatch && verificationMatch && searchMatch;
+    const haystack = `${item.id ?? ''} ${item.location ?? ''} ${item.cause ?? ''} ${item.description ?? ''}`.toLowerCase();
+    return severityMatch && verificationMatch && (!search || haystack.includes(search));
   });
 }
 
@@ -98,10 +114,14 @@ function markerRadius(severity) {
 }
 
 function popupHtml(item) {
+  const accuracy = item.coordinate_accuracy_m
+    ? ` · ±${escapeHtml(Math.round(item.coordinate_accuracy_m))} m`
+    : '';
+  const provenance = item.provenance ? ` · ${escapeHtml(item.provenance)}` : '';
   return `
     <h3 class="popup-title">${escapeHtml(item.location)}</h3>
     <p class="popup-copy">${escapeHtml(item.description)}</p>
-    <div class="popup-meta"><strong>${escapeHtml(item.severity.toUpperCase())}</strong> · ${escapeHtml(item.date)} · ${escapeHtml(item.id)}</div>
+    <div class="popup-meta"><strong>${escapeHtml(item.severity.toUpperCase())}</strong> · ${escapeHtml(item.date)} · ${escapeHtml(item.id)}${accuracy}${provenance}</div>
   `;
 }
 
@@ -110,11 +130,13 @@ function renderMarkers(data) {
   markerIndex.clear();
 
   data.forEach(item => {
-    const marker = L.circleMarker([Number(item.latitude), Number(item.longitude)], {
+    const coordinates = coordinatesFor(item);
+    if (!coordinates) return;
+    const marker = L.circleMarker(coordinates, {
       radius: markerRadius(item.severity),
       color: '#ffffff',
       weight: 2.5,
-      fillColor: severityColor[item.severity],
+      fillColor: severityColor[item.severity] || '#5c6d6d',
       fillOpacity: 0.92
     }).addTo(markerLayer);
 
@@ -126,11 +148,11 @@ function renderMarkers(data) {
 
 function renderIncidentList(data) {
   if (!data.length) {
-    incidentList.innerHTML = '<div class="empty-state">No incidents match the current filters.</div>';
+    ui.incidentList.innerHTML = '<div class="empty-state">No incidents match the current filters.</div>';
     return;
   }
 
-  incidentList.innerHTML = data.map(item => `
+  ui.incidentList.innerHTML = data.map(item => `
     <button class="incident-card ${item.id === activeIncidentId ? 'active' : ''}" data-id="${escapeHtml(item.id)}" type="button">
       <div class="incident-card-top">
         <span class="severity-label"><i class="dot ${escapeHtml(item.severity)}"></i>${escapeHtml(item.severity)}</span>
@@ -142,7 +164,7 @@ function renderIncidentList(data) {
     </button>
   `).join('');
 
-  incidentList.querySelectorAll('.incident-card').forEach(card => {
+  ui.incidentList.querySelectorAll('.incident-card').forEach(card => {
     card.addEventListener('click', () => setActiveIncident(card.dataset.id, true));
   });
 }
@@ -150,28 +172,33 @@ function renderIncidentList(data) {
 function updateRisk(data) {
   const raw = data.reduce((sum, item) => sum + (severityWeight[item.severity] || 0), 0);
   const normalized = Math.min(100, Math.round((raw / Math.max(1, data.length * 10)) * 100));
-  riskScore.textContent = normalized;
-  riskFill.style.width = `${normalized}%`;
+  ui.riskScore.textContent = normalized;
+  ui.riskFill.style.width = `${normalized}%`;
 
-  if (!data.length) riskNarrative.textContent = 'No visible records are available for risk calculation.';
-  else if (normalized >= 70) riskNarrative.textContent = 'High visible severity. Prioritize engineering review and targeted enforcement.';
-  else if (normalized >= 45) riskNarrative.textContent = 'Elevated visible severity. Investigate repeat causes and response coverage.';
-  else riskNarrative.textContent = 'Moderate visible severity. Continue monitoring and verify incoming reports.';
+  if (!data.length) ui.riskNarrative.textContent = 'No visible records are available for risk calculation.';
+  else if (normalized >= 70) ui.riskNarrative.textContent = 'High visible severity. Prioritize engineering review and targeted enforcement.';
+  else if (normalized >= 45) ui.riskNarrative.textContent = 'Elevated visible severity. Investigate repeat causes and response coverage.';
+  else ui.riskNarrative.textContent = 'Moderate visible severity. Continue monitoring and verify incoming reports.';
 }
 
 function applyFilters() {
   const filtered = getFilteredData();
-  visibleCount.textContent = `${filtered.length} incident${filtered.length === 1 ? '' : 's'}`;
+  ui.visibleCount.textContent = `${filtered.length} incident${filtered.length === 1 ? '' : 's'}`;
   renderMarkers(filtered);
   renderIncidentList(filtered);
   updateRisk(filtered);
 }
 
 function setActiveIncident(id, openPopup) {
-  activeIncidentId = id;
   const item = incidentData.find(record => record.id === id);
-  if (!item) return;
-  map.flyTo([Number(item.latitude), Number(item.longitude)], 13, { duration: 0.7 });
+  const coordinates = coordinatesFor(item);
+  if (!item || !coordinates) {
+    setStatus('This incident does not contain a valid map coordinate.', 'error');
+    return;
+  }
+
+  activeIncidentId = id;
+  map.flyTo(coordinates, 13, { duration: 0.7 });
   const marker = markerIndex.get(id);
   if (marker && openPopup) marker.openPopup();
   renderIncidentList(getFilteredData());
@@ -179,94 +206,165 @@ function setActiveIncident(id, openPopup) {
 
 function getLocation({ fillForm = false } = {}) {
   if (!navigator.geolocation) {
-    formMessage.textContent = 'Location services are unavailable in this browser.';
+    const message = 'Location services are unavailable in this browser.';
+    if (fillForm) ui.formMessage.textContent = message;
+    setStatus(message, 'error');
     return;
   }
 
+  setStatus('Requesting your device location…');
   navigator.geolocation.getCurrentPosition(position => {
-    const { latitude, longitude } = position.coords;
+    const { latitude, longitude, accuracy } = position.coords;
+    const capturedAt = new Date(position.timestamp || Date.now()).toISOString();
+
     if (fillForm) {
-      document.getElementById('latitudeInput').value = latitude.toFixed(6);
-      document.getElementById('longitudeInput').value = longitude.toFixed(6);
-      formMessage.textContent = 'Coordinates captured successfully.';
+      ui.latitudeInput.value = latitude.toFixed(6);
+      ui.longitudeInput.value = longitude.toFixed(6);
+      ui.accuracyInput.value = Number.isFinite(accuracy) ? Math.round(accuracy) : '';
+      ui.capturedAtInput.value = capturedAt;
+      ui.formMessage.textContent = 'Coordinates, accuracy, and timestamp captured.';
     } else {
       if (userMarker) map.removeLayer(userMarker);
-      userMarker = L.marker([latitude, longitude]).addTo(map).bindPopup('Your approximate device location').openPopup();
+      userMarker = L.marker([latitude, longitude])
+        .addTo(map)
+        .bindPopup(`Your approximate device location${Number.isFinite(accuracy) ? ` (±${Math.round(accuracy)} m)` : ''}`)
+        .openPopup();
       map.flyTo([latitude, longitude], 14);
     }
+    setStatus('Device location captured. It remains in your browser unless you save a report.', 'success');
   }, error => {
-    formMessage.textContent = `Location could not be captured: ${error.message}`;
+    const message = `Location could not be captured: ${error.message}`;
+    if (fillForm) ui.formMessage.textContent = message;
+    setStatus(message, 'error');
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
 }
 
 function openReportDialog() {
-  formMessage.textContent = '';
-  reportDialog.showModal();
+  ui.formMessage.textContent = '';
+  ui.reportDialog.showModal();
 }
 
 function closeReportDialog() {
-  reportDialog.close();
+  ui.reportDialog.close();
 }
 
-document.querySelectorAll('.severity-filter').forEach(input => input.addEventListener('change', applyFilters));
-searchInput.addEventListener('input', applyFilters);
-verificationFilter.addEventListener('change', applyFilters);
+function bindEvents() {
+  document.querySelectorAll('.severity-filter').forEach(input => input.addEventListener('change', applyFilters));
+  ui.searchInput.addEventListener('input', applyFilters);
+  ui.verificationFilter.addEventListener('change', applyFilters);
 
-document.getElementById('resetBtn').addEventListener('click', () => {
-  searchInput.value = '';
-  verificationFilter.value = 'all';
-  document.querySelectorAll('.severity-filter').forEach(input => { input.checked = true; });
-  activeIncidentId = null;
-  applyFilters();
-  map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
-});
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    ui.searchInput.value = '';
+    ui.verificationFilter.value = 'all';
+    document.querySelectorAll('.severity-filter').forEach(input => { input.checked = true; });
+    activeIncidentId = null;
+    applyFilters();
+    map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
+  });
 
-document.getElementById('focusCorridorBtn').addEventListener('click', () => {
-  map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
-  document.querySelector('.workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
+  document.getElementById('focusCorridorBtn').addEventListener('click', () => {
+    map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
+    document.querySelector('.workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
-document.getElementById('reportBtn').addEventListener('click', openReportDialog);
-document.getElementById('closeDialogBtn').addEventListener('click', closeReportDialog);
-document.getElementById('locateBtn').addEventListener('click', () => getLocation());
-document.getElementById('formLocateBtn').addEventListener('click', () => getLocation({ fillForm: true }));
+  document.getElementById('reportBtn').addEventListener('click', openReportDialog);
+  document.getElementById('closeDialogBtn').addEventListener('click', closeReportDialog);
+  document.getElementById('locateBtn').addEventListener('click', () => getLocation());
+  document.getElementById('formLocateBtn').addEventListener('click', () => getLocation({ fillForm: true }));
 
-reportForm.addEventListener('submit', event => {
-  event.preventDefault();
-  const formData = new FormData(reportForm);
-  const latitude = Number(formData.get('latitude'));
-  const longitude = Number(formData.get('longitude'));
+  ui.reportForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const formData = new FormData(ui.reportForm);
+    const latitude = Number(formData.get('latitude'));
+    const longitude = Number(formData.get('longitude'));
+    const location = (formData.get('location') || '').toString().trim();
+    const description = (formData.get('description') || '').toString().trim();
+    const severity = (formData.get('severity') || '').toString();
+    const accuracy = Number(formData.get('accuracy'));
+    const capturedAtValue = (formData.get('captured_at') || '').toString();
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    formMessage.textContent = 'Please provide valid coordinates.';
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !coordinatesFor({ latitude, longitude })) {
+      ui.formMessage.textContent = 'Please provide valid coordinates.';
+      return;
+    }
+    if (!location || !description || !severity) {
+      ui.formMessage.textContent = 'Complete the location, severity, and description fields.';
+      return;
+    }
+    if (!Number.isFinite(accuracy) || accuracy <= 0) {
+      ui.formMessage.textContent = 'Coordinate accuracy is required. Capture your location or enter a positive accuracy estimate.';
+      return;
+    }
+
+    const capturedAt = capturedAtValue || new Date().toISOString();
+    const report = normalizeIncident({
+      id: `LOCAL-${Date.now().toString().slice(-7)}`,
+      location,
+      severity,
+      date: capturedAt.slice(0, 10),
+      cause: 'Community-submitted prototype report',
+      verification: 'pending',
+      provenance: 'browser_local_report',
+      description,
+      latitude,
+      longitude,
+      coordinate_accuracy_m: accuracy,
+      captured_at: capturedAt
+    });
+
+    const reports = loadLocalReports();
+    reports.unshift(report);
+    saveLocalReports(reports);
+    incidentData.unshift(report);
+    ui.reportForm.reset();
+    closeReportDialog();
+    applyFilters();
+    setActiveIncident(report.id, true);
+    setStatus('Prototype report saved locally on this device. Call FRSC 122 for emergency response.', 'success');
+  });
+}
+
+function boot() {
+  Object.assign(ui, {
+    appStatus: document.getElementById('appStatus'),
+    visibleCount: document.getElementById('visibleCount'),
+    incidentList: document.getElementById('incidentList'),
+    searchInput: document.getElementById('searchInput'),
+    verificationFilter: document.getElementById('verificationFilter'),
+    riskScore: document.getElementById('riskScore'),
+    riskFill: document.getElementById('riskFill'),
+    riskNarrative: document.getElementById('riskNarrative'),
+    reportDialog: document.getElementById('reportDialog'),
+    reportForm: document.getElementById('reportForm'),
+    formMessage: document.getElementById('formMessage'),
+    latitudeInput: document.getElementById('latitudeInput'),
+    longitudeInput: document.getElementById('longitudeInput'),
+    accuracyInput: document.getElementById('accuracyInput'),
+    capturedAtInput: document.getElementById('capturedAtInput')
+  });
+
+  if (!window.L) {
+    document.getElementById('map').innerHTML = '<div class="map-fallback">The mapping library could not load. Check the connection and reload the page.</div>';
+    setStatus('The mapping library could not load.', 'error');
     return;
   }
 
-  const report = {
-    id: `LOCAL-${Date.now().toString().slice(-7)}`,
-    location: formData.get('location').trim(),
-    severity: formData.get('severity'),
-    date: new Date().toISOString().slice(0, 10),
-    cause: 'Community-submitted prototype report',
-    verification: 'pending',
-    description: formData.get('description').trim(),
-    latitude,
-    longitude
-  };
+  map = L.map('map', { zoomControl: false }).setView([6.95, 3.63], 9);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-  const reports = loadLocalReports();
-  reports.unshift(report);
-  saveLocalReports(reports);
-  incidentData.unshift(report);
-  reportForm.reset();
-  closeReportDialog();
-  applyFilters();
-  setActiveIncident(report.id, true);
-});
+  corridorLayer = L.polyline(corridorCoordinates, {
+    color: '#10504e', weight: 7, opacity: 0.83, lineCap: 'round'
+  }).addTo(map);
+  corridorLayer.bindTooltip('Lagos–Ibadan pilot corridor', { sticky: true });
+  markerLayer = L.layerGroup().addTo(map);
 
-map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
-loadData();
-
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  bindEvents();
+  map.fitBounds(corridorLayer.getBounds(), { padding: [28, 28] });
+  loadData();
 }
+
+boot();

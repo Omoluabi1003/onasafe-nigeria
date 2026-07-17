@@ -1,0 +1,56 @@
+name: GeoAware Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Build, test, security, and static validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install application and audit dependencies
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r requirements.txt pip-audit
+      - name: Generate dependency security evidence
+        run: pip-audit -r requirements.txt --format json > pip-audit.json || true
+      - name: Upload dependency security evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dependency-audit
+          path: pip-audit.json
+          retention-days: 14
+      - name: Enforce dependency security gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('pip-audit.json').read_text())
+          vulnerabilities = [
+              (dependency['name'], dependency['version'], vulnerability['id'], vulnerability.get('fix_versions', []))
+              for dependency in payload.get('dependencies', [])
+              for vulnerability in dependency.get('vulns', [])
+          ]
+          if vulnerabilities:
+              for name, version, advisory, fixes in vulnerabilities:
+                  print(f'VULNERABLE {name} {version} {advisory} fixes={fixes}')
+              raise SystemExit(1)
+          print('No known Python dependency vulnerabilities found.')
+          PY
+      - name: API contract tests
+        run: python -m pytest -q
+      - name: Static application contract
+        run: python scripts/validate_static.py
+      - name: JavaScript syntax
+        run: node --check app.js
