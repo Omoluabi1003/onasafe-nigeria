@@ -1,202 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b2f2f" />
-  <meta name="description" content="Ọ̀nàSafe Nigeria crash intelligence and emergency response prototype." />
-  <title>Ọ̀nàSafe Nigeria</title>
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="preconnect" href="https://unpkg.com" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynhAHUlMZVZ8uKAzJQpLIfwEVTg=" crossorigin="" />
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0b2f2f" />
+<meta name="description" content="Ọ̀nàSafe Nigeria crash intelligence and emergency response prototype." />
+<title>Ọ̀nàSafe Nigeria</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="preconnect" href="https://unpkg.com" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynhAHUlMZVZ8uKAzJQpLIfwEVTg=" crossorigin="" />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-block">
-      <div class="brand-mark" aria-hidden="true">Ọ̀</div>
-      <div>
-        <p class="eyebrow">ETL GIS Consulting LLC Prototype</p>
-        <h1>Ọ̀nàSafe Nigeria</h1>
-        <p class="tagline">Every crash mapped. Every response faster.</p>
-      </div>
-    </div>
-    <div class="top-actions">
-      <button id="locateBtn" class="button button-ghost" type="button">Use my location</button>
-      <a class="button button-emergency" href="tel:122" aria-label="Call FRSC emergency number 122">Call FRSC 122</a>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero-grid" aria-labelledby="nationalSnapshotHeading">
-      <div class="hero-copy">
-        <p class="eyebrow">Nigeria road-safety intelligence</p>
-        <h2 id="nationalSnapshotHeading">From scattered crash reports to coordinated action.</h2>
-        <p>Ọ̀nàSafe combines crash mapping, verified public reporting, corridor risk analysis, and emergency escalation in one operational interface.</p>
-        <div class="hero-actions">
-          <button id="reportBtn" class="button button-primary" type="button">Report a crash</button>
-          <button id="focusCorridorBtn" class="button button-secondary" type="button">View pilot corridor</button>
-        </div>
-      </div>
-      <div class="snapshot-card" aria-label="Nigeria Q1 2026 road transport snapshot">
-        <div class="snapshot-heading">
-          <span>National snapshot</span>
-          <span class="status-pill">Q1 2026</span>
-        </div>
-        <div class="metric-grid">
-          <article><strong>2,720</strong><span>reported crashes</span></article>
-          <article><strong>1,347</strong><span>fatalities</span></article>
-          <article><strong>8,575</strong><span>injuries</span></article>
-          <article><strong>71.82%</strong><span>vehicles commercial</span></article>
-        </div>
-        <p class="source-note">National aggregate: NBS Road Transport Report Q1 2026. Map incidents below are simulated prototype records.</p>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <aside class="control-panel" aria-label="Map controls">
-        <div class="panel-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Pilot</p>
-              <h3>Lagos–Ibadan corridor</h3>
-            </div>
-            <span id="visibleCount" class="count-badge">0 incidents</span>
-          </div>
-          <label class="search-label" for="searchInput">Search incidents</label>
-          <input id="searchInput" type="search" placeholder="Location, cause, or reference" autocomplete="off" />
-        </div>
-
-        <div class="panel-section">
-          <h4>Severity</h4>
-          <div class="filter-stack">
-            <label><input class="severity-filter" type="checkbox" value="fatal" checked /> <span class="dot fatal"></span> Fatal</label>
-            <label><input class="severity-filter" type="checkbox" value="serious" checked /> <span class="dot serious"></span> Serious</label>
-            <label><input class="severity-filter" type="checkbox" value="minor" checked /> <span class="dot minor"></span> Minor</label>
-          </div>
-        </div>
-
-        <div class="panel-section">
-          <h4>Verification</h4>
-          <select id="verificationFilter">
-            <option value="all">All records</option>
-            <option value="verified">Verified only</option>
-            <option value="pending">Pending review</option>
-            <option value="simulated">Prototype simulation</option>
-          </select>
-        </div>
-
-        <div class="panel-section risk-summary">
-          <h4>Corridor risk index</h4>
-          <div class="risk-score-row"><strong id="riskScore">0</strong><span>/ 100</span></div>
-          <div class="risk-track"><div id="riskFill"></div></div>
-          <p id="riskNarrative">Calculating visible corridor risk…</p>
-        </div>
-
-        <div class="panel-section notice">
-          <strong>Prototype safeguard</strong>
-          <p>No victim names, number plates, or identifiable personal data are collected in this demonstration.</p>
-        </div>
-      </aside>
-
-      <section class="map-shell" aria-label="Crash map">
-        <div id="map" role="application" aria-label="Interactive crash map"></div>
-        <div class="map-legend" aria-label="Map legend">
-          <span><i class="dot fatal"></i> Fatal</span>
-          <span><i class="dot serious"></i> Serious</span>
-          <span><i class="dot minor"></i> Minor</span>
-          <span><i class="corridor-line"></i> Pilot corridor</span>
-        </div>
-      </section>
-
-      <aside class="incident-panel" aria-label="Incident list">
-        <div class="section-heading sticky-heading">
-          <div>
-            <p class="eyebrow">Operational feed</p>
-            <h3>Visible incidents</h3>
-          </div>
-          <button id="resetBtn" class="text-button" type="button">Reset</button>
-        </div>
-        <div id="incidentList" class="incident-list"></div>
-      </aside>
-    </section>
-
-    <section class="value-grid">
-      <article>
-        <span class="step">01</span>
-        <h3>See the pattern</h3>
-        <p>Identify recurring hotspots by road segment, crash severity, time, vehicle type, and contributing factor.</p>
-      </article>
-      <article>
-        <span class="step">02</span>
-        <h3>Verify the signal</h3>
-        <p>Route public and partner submissions through confidence scoring, deduplication, and human validation.</p>
-      </article>
-      <article>
-        <span class="step">03</span>
-        <h3>Coordinate response</h3>
-        <p>Escalate urgent events to FRSC 122 while giving responders a precise location and structured incident summary.</p>
-      </article>
-      <article>
-        <span class="step">04</span>
-        <h3>Prevent recurrence</h3>
-        <p>Produce evidence packs for engineering treatment, enforcement deployment, fleet controls, and public awareness.</p>
-      </article>
-    </section>
-  </main>
-
-  <dialog id="reportDialog">
-    <form id="reportForm" method="dialog">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">Community reporting</p>
-          <h2>Report a road crash</h2>
-        </div>
-        <button id="closeDialogBtn" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
-      <p class="dialog-intro">For immediate rescue, call FRSC on <strong>122</strong>. This form saves a prototype report locally on your device.</p>
-
-      <div class="form-grid">
-        <label>Location description
-          <input name="location" required placeholder="Example: near Sagamu Interchange" />
-        </label>
-        <label>Severity observed
-          <select name="severity" required>
-            <option value="">Choose one</option>
-            <option value="fatal">Possible fatality</option>
-            <option value="serious">Serious injuries</option>
-            <option value="minor">Minor crash</option>
-          </select>
-        </label>
-        <label>Latitude
-          <input id="latitudeInput" name="latitude" type="number" step="any" required placeholder="6.9000" />
-        </label>
-        <label>Longitude
-          <input id="longitudeInput" name="longitude" type="number" step="any" required placeholder="3.6000" />
-        </label>
-        <label class="full-width">What happened?
-          <textarea name="description" rows="4" required placeholder="Describe visible conditions without including victim names or number plates."></textarea>
-        </label>
-      </div>
-
-      <div class="privacy-check">
-        <label><input name="privacy" type="checkbox" required /> I confirm that this report excludes personal identifiers.</label>
-      </div>
-
-      <div class="dialog-actions">
-        <button id="formLocateBtn" class="button button-secondary" type="button">Capture my coordinates</button>
-        <button class="button button-primary" type="submit">Save prototype report</button>
-      </div>
-      <p id="formMessage" class="form-message" role="status"></p>
-    </form>
-  </dialog>
-
-  <footer>
-    <p><strong>Ọ̀nàSafe Nigeria</strong> is an ETL GIS Consulting LLC product concept.</p>
-    <p>Prototype data only. Emergency escalation: FRSC 122.</p>
-  </footer>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js"></script>
+<header class="topbar">
+<div class="brand-block">
+<div class="brand-mark" aria-hidden="true">Ọ̀</div>
+<div>
+<p class="eyebrow">ETL GIS Consulting LLC Prototype</p>
+<h1>Ọ̀nàSafe Nigeria</h1>
+<p class="tagline">Every crash mapped. Every response faster.</p>
+</div>
+</div>
+<div class="top-actions">
+<button id="locateBtn" class="button button-ghost" type="button">Use my location</button>
+<a class="button button-emergency" href="tel:122" aria-label="Call FRSC emergency number 122">Call FRSC 122</a>
+</div>
+</header>
+<main>
+<section class="hero-grid" aria-labelledby="nationalSnapshotHeading">
+<div class="hero-copy">
+<p class="eyebrow">Nigeria road-safety intelligence</p>
+<h2 id="nationalSnapshotHeading">From scattered crash reports to coordinated action.</h2>
+<p>Ọ̀nàSafe combines crash mapping, verified public reporting, corridor risk analysis, and emergency escalation in one operational interface.</p>
+<div class="hero-actions">
+<button id="reportBtn" class="button button-primary" type="button">Report a crash</button>
+<button id="focusCorridorBtn" class="button button-secondary" type="button">View pilot corridor</button>
+</div>
+</div>
+<div class="snapshot-card" aria-label="Nigeria Q1 2026 road transport snapshot">
+<div class="snapshot-heading"><span>National snapshot</span><span class="status-pill">Q1 2026</span></div>
+<div class="metric-grid">
+<article><strong>2,720</strong><span>reported crashes</span></article>
+<article><strong>1,347</strong><span>fatalities</span></article>
+<article><strong>8,575</strong><span>injuries</span></article>
+<article><strong>71.82%</strong><span>vehicles commercial</span></article>
+</div>
+<p class="source-note">National aggregate: NBS Road Transport Report Q1 2026. Map incidents below are simulated prototype records.</p>
+</div>
+</section>
+<section class="workspace">
+<aside class="control-panel" aria-label="Map controls">
+<div class="panel-section"><div class="section-heading"><div><p class="eyebrow">Pilot</p><h3>Lagos–Ibadan corridor</h3></div><span id="visibleCount" class="count-badge">0 incidents</span></div><label class="search-label" for="searchInput">Search incidents</label><input id="searchInput" type="search" placeholder="Location, cause, or reference" autocomplete="off" /></div>
+<div class="panel-section"><h4>Severity</h4><div class="filter-stack"><label><input class="severity-filter" type="checkbox" value="fatal" checked /> <span class="dot fatal"></span> Fatal</label><label><input class="severity-filter" type="checkbox" value="serious" checked /> <span class="dot serious"></span> Serious</label><label><input class="severity-filter" type="checkbox" value="minor" checked /> <span class="dot minor"></span> Minor</label></div></div>
+<div class="panel-section"><h4>Verification</h4><select id="verificationFilter"><option value="all">All records</option><option value="verified">Verified only</option><option value="pending">Pending review</option><option value="simulated">Prototype simulation</option></select></div>
+<div class="panel-section risk-summary"><h4>Corridor risk index</h4><div class="risk-score-row"><strong id="riskScore">0</strong><span>/ 100</span></div><div class="risk-track"><div id="riskFill"></div></div><p id="riskNarrative">Calculating visible corridor risk…</p></div>
+<div class="panel-section notice"><strong>Prototype safeguard</strong><p>No victim names, number plates, or identifiable personal data are collected in this demonstration.</p></div>
+</aside>
+<section class="map-shell" aria-label="Crash map"><div id="map" role="application" aria-label="Interactive crash map"></div><div class="map-legend" aria-label="Map legend"><span><i class="dot fatal"></i> Fatal</span><span><i class="dot serious"></i> Serious</span><span><i class="dot minor"></i> Minor</span><span><i class="corridor-line"></i> Pilot corridor</span></div></section>
+<aside class="incident-panel" aria-label="Incident list"><div class="section-heading sticky-heading"><div><p class="eyebrow">Operational feed</p><h3>Visible incidents</h3></div><button id="resetBtn" class="text-button" type="button">Reset</button></div><div id="incidentList" class="incident-list"></div></aside>
+</section>
+<section class="value-grid">
+<article><span class="step">01</span><h3>See the pattern</h3><p>Identify recurring hotspots by road segment, crash severity, time, vehicle type, and contributing factor.</p></article>
+<article><span class="step">02</span><h3>Verify the signal</h3><p>Route public and partner submissions through confidence scoring, deduplication, and human validation.</p></article>
+<article><span class="step">03</span><h3>Coordinate response</h3><p>Escalate urgent events to FRSC 122 while giving responders a precise location and structured incident summary.</p></article>
+<article><span class="step">04</span><h3>Prevent recurrence</h3><p>Produce evidence packs for engineering treatment, enforcement deployment, fleet controls, and public awareness.</p></article>
+</section>
+</main>
+<dialog id="reportDialog"><form id="reportForm" method="dialog"><div class="dialog-heading"><div><p class="eyebrow">Community reporting</p><h2>Report a road crash</h2></div><button id="closeDialogBtn" class="icon-button" type="button" aria-label="Close">×</button></div><p class="dialog-intro">For immediate rescue, call FRSC on <strong>122</strong>. This form saves a prototype report locally on your device.</p><div class="form-grid"><label>Location description<input name="location" required placeholder="Example: near Sagamu Interchange" /></label><label>Severity observed<select name="severity" required><option value="">Choose one</option><option value="fatal">Possible fatality</option><option value="serious">Serious injuries</option><option value="minor">Minor crash</option></select></label><label>Latitude<input id="latitudeInput" name="latitude" type="number" step="any" required placeholder="6.9000" /></label><label>Longitude<input id="longitudeInput" name="longitude" type="number" step="any" required placeholder="3.6000" /></label><label class="full-width">What happened?<textarea name="description" rows="4" required placeholder="Describe visible conditions without including victim names or number plates."></textarea></label></div><div class="privacy-check"><label><input name="privacy" type="checkbox" required /> I confirm that this report excludes personal identifiers.</label></div><div class="dialog-actions"><button id="formLocateBtn" class="button button-secondary" type="button">Capture my coordinates</button><button class="button button-primary" type="submit">Save prototype report</button></div><p id="formMessage" class="form-message" role="status"></p></form></dialog>
+<footer><p><strong>Developed by ETL GIS Consulting LLC.</strong></p><p>Platform strategy, geospatial intelligence, and digital experience architecture by ETL GIS Consulting LLC.</p><p>Prototype data only. Emergency escalation: FRSC 122.</p></footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script><script src="app.js"></script>
 </body>
 </html>
