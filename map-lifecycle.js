@@ -39,7 +39,7 @@
   window.addEventListener('pageshow', runStabilizationSequence);
   window.addEventListener('resize', () => stabilizeMap({ refit: false }), { passive: true });
   window.addEventListener('orientationchange', () => {
-    window.setTimeout(() => stabilizeMap({ refit: true }), 250);
+    stabilizationTimeouts.push(window.setTimeout(() => stabilizeMap({ refit: true }), 250));
   });
 
   if (window.visualViewport) {
