@@ -158,7 +158,7 @@ function renderActualPoints(records) {
       weight: 2,
       fillColor: '#75336f',
       fillOpacity: .95
-    }).bindTooltip(`${record.location} · ${record.captured_at.slice(0, 10)}`, { direction: 'top' }).addTo(actualPointLayer);
+    }).bindTooltip(escapeHtml(record.location) + " · " + escapeHtml(record.captured_at.slice(0, 10)), { direction: "top" }).addTo(actualPointLayer);
   });
 }
 
