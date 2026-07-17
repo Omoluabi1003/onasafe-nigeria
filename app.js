@@ -36,7 +36,7 @@ function coordinatesFor(item) {
   const latitude = Number(item?.latitude);
   const longitude = Number(item?.longitude);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  if (latitude < 4.0 || latitude > 14.5 || longitude < 2.0 || longitude > 15.0) return null;
   return [latitude, longitude];
 }
 
@@ -57,7 +57,7 @@ function normalizeIncident(item) {
   const capturedAt = item.captured_at || item.capturedAt || null;
   return {
     ...item,
-    date: item.date || (capturedAt ? capturedAt.slice(0, 10) : 'Unknown date'),
+    date: item.date || (typeof capturedAt === 'string' ? capturedAt.slice(0, 10) : 'Unknown date'),
     captured_at: capturedAt,
     coordinate_accuracy_m: Number.isFinite(Number(item.coordinate_accuracy_m))
       ? Number(item.coordinate_accuracy_m)
@@ -72,7 +72,9 @@ async function loadData() {
     const geojson = await response.json();
     if (!Array.isArray(geojson.features)) throw new Error('The corridor dataset is not valid GeoJSON.');
 
-    const demoRecords = geojson.features.map(feature => normalizeIncident({
+    const demoRecords = geojson.features
+      .filter(feature => feature && feature.properties)
+      .map(feature => normalizeIncident({
       ...feature.properties,
       latitude: feature.geometry?.coordinates?.[1],
       longitude: feature.geometry?.coordinates?.[0]
@@ -100,7 +102,7 @@ function getFilteredData() {
   return incidentData.filter(item => {
     const severityMatch = severities.includes(item.severity);
     const verificationMatch = verification === 'all' || item.verification === verification;
-    const haystack = `${item.id} ${item.location} ${item.cause} ${item.description}`.toLowerCase();
+    const haystack = `${item.id ?? ''} ${item.location ?? ''} ${item.cause ?? ''} ${item.description ?? ''}`.toLowerCase();
     return severityMatch && verificationMatch && (!search || haystack.includes(search));
   });
 }
