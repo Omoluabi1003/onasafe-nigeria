@@ -1,59 +1,36 @@
-# Ọ̀nàSafe Nigeria MVP
+# Ọ̀nàSafe Nigeria
 
-Ọ̀nàSafe Nigeria is a functional front-end prototype for a national crash-intelligence and emergency-response platform. The initial pilot is scoped to the Lagos–Ibadan Expressway corridor.
+Ọ̀nàSafe Nigeria is a crash-intelligence and emergency-response spatial operating system for Nigerian corridors, beginning with a 90-day Lagos-Ibadan Expressway pilot.
 
-## What is included
+This repository contains an MVP product scaffold with:
 
-- Interactive Leaflet crash map
-- Severity and verification filters
-- Corridor risk score
-- Incident search and operational feed
-- FRSC 122 emergency call action
-- Browser geolocation
-- Privacy-conscious community crash form
-- Local device storage for prototype reports
-- Responsive interface and basic PWA support
-- Clearly labelled simulated map records
+- A privacy-safe public incident and hazard map specification.
+- Structured GPS-enabled reporting requirements.
+- Operations workflows for verification, duplicate handling, responder status, role-based access, and auditability.
+- Analytics requirements for hotspots, road-segment risk, temporal patterns, and intervention tracking.
 
-## Run locally
+## Non-negotiable safety and trust rules
 
-Because the app loads GeoJSON through `fetch`, open it through a local web server:
+1. Public map records must show provenance and verification level.
+2. Demonstration data must never be presented as verified crash data.
+3. Victim names, phone numbers, number plates, and graphic evidence must never be public.
+4. FRSC 122 remains the primary emergency escalation action.
+5. AI may assist review but must not declare fatalities or legal fault.
+6. The interface must work on low-bandwidth mobile connections.
+7. All spatial records must include coordinate accuracy and timestamps.
 
-```bash
-python -m http.server 8080
-```
+## Pilot
 
-Then open `http://localhost:8080`.
+- **Corridor:** Lagos-Ibadan Expressway
+- **Duration:** 90 days
+- **Primary users:** FRSC, road authorities, emergency agencies, fleets, and insurers
+- **North star:** Reduce report-to-verification-to-escalation time and generate actionable prevention intelligence.
 
-## Deploy
+## Definition of done
 
-This package can be deployed as a static site to GitHub Pages, Cloudflare Pages, Netlify, or Vercel without a build step.
-
-## Data status
-
-The national KPI panel uses the National Bureau of Statistics Road Transport Report Q1 2026 aggregate figures. The mapped incident records are simulated and must not be represented as verified real-world crashes.
-
-Primary dataset catalog:
-https://microdata.nigerianstat.gov.ng/index.php/catalog/164/related-materials
-
-FRSC emergency information:
-https://frsc.gov.ng/
-
-Nigeria Data Protection Commission:
-https://ndpc.gov.ng/
-
-## Recommended production stack
-
-- Front end: Next.js, TypeScript, MapLibre GL JS
-- API: FastAPI or NestJS
-- Spatial database: PostgreSQL/PostGIS
-- Queue and cache: Redis
-- Object evidence storage: S3-compatible encrypted bucket
-- Authentication: Keycloak, Auth0, or Microsoft Entra External ID
-- Analytics: Python, GeoPandas, scikit-learn, H3
-- Hosting: Nigerian-region capable cloud or approved government infrastructure
-- Observability: OpenTelemetry, Sentry, Grafana
-
-## Production safeguards
-
-Do not publish victim names, phone numbers, vehicle registration plates, exact home addresses, or graphic images. Separate public visualization data from restricted responder evidence, implement retention rules, and complete a Data Protection Impact Assessment before production processing of precise location or media evidence.
+- A user can report a crash with GPS coordinates.
+- A verifier can review, merge, reject, or confirm the report.
+- A responder can update operational status.
+- The public can view only privacy-safe incident information.
+- The system produces corridor hotspots and intervention-ready evidence.
+- All changes are auditable.
