@@ -192,8 +192,9 @@ function renderSegmentSummary(bins) {
 function updateVisibleSummary(records, bins) {
   ui.displayedDeaths.textContent = records.length;
   ui.occupiedBins.textContent = bins.length;
-  ui.dayCount.textContent = records.filter(record => timeFor(record) === 'day').length;
-  ui.nightCount.textContent = records.filter(record => timeFor(record) === 'night').length;
+  const dayCount = records.filter(record => timeFor(record) === 'day').length;
+  ui.dayCount.textContent = dayCount;
+  ui.nightCount.textContent = records.length - dayCount;
   ui.mapEmptyState.hidden = records.length !== 0;
 }
 
