@@ -1,0 +1,10 @@
+{
+  "name": "Ọ̀nàSafe Nigeria",
+  "short_name": "Ọ̀nàSafe",
+  "description": "Crash intelligence and emergency response prototype for Nigeria.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef3f0",
+  "theme_color": "#082b2b",
+  "icons": []
+}
