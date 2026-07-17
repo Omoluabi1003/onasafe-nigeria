@@ -1,0 +1,76 @@
+{
+  "mode": "YCOMBINATOR",
+  "execution_mode": "GEOAWARE_80_20",
+  "product": "Ọ̀nàSafe Nigeria",
+  "repository": "onasafe-nigeria",
+  "mission": "Build Nigeria's crash-intelligence and emergency-response spatial operating system, beginning with a Lagos-Ibadan Expressway pilot.",
+  "non_negotiables": [
+    "Public map records must display provenance and verification level.",
+    "Demonstration data must never be presented as verified crash data.",
+    "Victim names, phone numbers, number plates, and graphic evidence must not be public.",
+    "FRSC 122 must remain the primary emergency escalation action.",
+    "AI may assist review but may not declare fatalities or legal fault.",
+    "The interface must work on low-bandwidth mobile connections.",
+    "All spatial records must include coordinate accuracy and timestamps."
+  ],
+  "mvp": {
+    "public": [
+      "Interactive crash and hazard map",
+      "Severity, date, verification, and corridor filters",
+      "FRSC 122 call action",
+      "GPS-enabled structured reporting",
+      "Low-bandwidth responsive mode"
+    ],
+    "operations": [
+      "Verification queue",
+      "Duplicate detection",
+      "Responder status workflow",
+      "Audit log",
+      "Role-based access"
+    ],
+    "analytics": [
+      "Severity-weighted hotspot detection",
+      "Road-segment risk scores",
+      "Temporal patterns",
+      "Intervention tracking",
+      "Executive corridor dashboard"
+    ]
+  },
+  "recommended_stack": {
+    "frontend": "Next.js + TypeScript + MapLibre GL JS",
+    "backend": "FastAPI",
+    "database": "PostgreSQL + PostGIS",
+    "cache_queue": "Redis",
+    "analytics": "Python + GeoPandas + H3",
+    "storage": "Encrypted S3-compatible object storage",
+    "observability": "OpenTelemetry + Grafana + Sentry"
+  },
+  "data_entities": [
+    "incident",
+    "incident_location",
+    "casualty_summary",
+    "vehicle_summary",
+    "road_condition",
+    "weather_observation",
+    "report_source",
+    "verification_event",
+    "response_action",
+    "road_segment",
+    "risk_score",
+    "intervention"
+  ],
+  "pilot": {
+    "corridor": "Lagos-Ibadan Expressway",
+    "duration_days": 90,
+    "primary_users": ["FRSC", "road authorities", "emergency agencies", "fleets", "insurers"],
+    "north_star": "Reduce report-to-verification-to-escalation time and generate actionable prevention intelligence."
+  },
+  "definition_of_done": [
+    "A user can report a crash with GPS coordinates.",
+    "A verifier can review, merge, reject, or confirm the report.",
+    "A responder can update the operational status.",
+    "The public can view only privacy-safe incident information.",
+    "The system produces corridor hotspots and intervention-ready evidence.",
+    "All changes are auditable."
+  ]
+}
