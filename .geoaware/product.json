@@ -10,6 +10,12 @@
     "operating_doctrine": "Think in YCOMBINATOR Mode. Execute in GeoAware 80/20 Mode.",
     "human_final_approval": true
   },
+  "design_reference": {
+    "primary_inspiration": "https://opencrashmap.org/",
+    "authority": "Project Architect supplied",
+    "adoption_rule": "Only directly observed or Project Architect-approved reference patterns may be adopted.",
+    "anti_drift_rule": "Do not invent, infer, or claim unverified OpenCrashMap features. Preserve Ọ̀nàSafe's Nigeria-specific identity and GeoAware boundaries."
+  },
   "geoaware_dimensions": ["geography", "exploration", "journey", "guidance"],
   "pilot": {
     "corridor": "Lagos-Ibadan Expressway",
