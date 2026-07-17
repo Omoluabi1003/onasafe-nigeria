@@ -279,7 +279,11 @@ function bindEvents() {
   });
   ui.drawerToggle.addEventListener('click', () => {
     ui.drawer.classList.toggle('closed');
-    window.setTimeout(() => map.invalidateSize(), 280);
+  });
+  ui.drawer.addEventListener('transitionend', event => {
+    if (event.propertyName === 'transform') {
+      map.invalidateSize();
+    }
   });
   ui.methodBtn.addEventListener('click', () => ui.methodDialog.showModal());
 }
