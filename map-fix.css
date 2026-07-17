@@ -1,0 +1,99 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+.app-shell,
+.map-stage,
+#map {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.app-shell {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.map-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  contain: layout paint size;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #dfe8e4;
+  touch-action: pan-x pan-y;
+}
+
+#map.leaflet-container,
+#map .leaflet-map-pane,
+#map .leaflet-tile-pane {
+  will-change: transform;
+}
+
+.control-drawer,
+.map-toolbar,
+.route-shield,
+.figure-legend,
+.simulation-banner,
+.map-empty-state {
+  transform: translateZ(0);
+}
+
+@media (max-width: 1024px) {
+  .control-drawer {
+    width: min(390px, calc(100vw - 32px));
+    top: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+
+  .map-toolbar {
+    left: 426px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  .control-drawer {
+    width: min(390px, calc(100vw - 20px));
+    top: max(10px, env(safe-area-inset-top));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+  }
+
+  .map-toolbar {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .figure-legend {
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .simulation-banner {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 44px);
+  }
+}

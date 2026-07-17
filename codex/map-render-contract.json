@@ -1,0 +1,29 @@
+{
+  "task": "Repair the broken Leaflet viewport shown in the Project Architect screenshot",
+  "symptom": "Most of the map stage is blank gray while only a small tile patch renders in the lower-right area.",
+  "diagnosis": "Leaflet initialized or retained stale container dimensions while the Safari viewport, browser chrome, or control drawer layout changed.",
+  "required_behaviour": [
+    "The map must fill the entire map stage on desktop, iPad landscape, iPad portrait, and mobile Safari.",
+    "Leaflet must invalidate its size after initial load, pageshow, viewport resize, orientation change, drawer transitions, visibility restoration, and observed map-container resize.",
+    "After initial stabilization or orientation change, the Lagos-Ibadan governed corridor must be refitted without animation.",
+    "The density figures, actual-point anchors, route line, toolbar, road shield, legend, and simulation banner must remain correctly positioned.",
+    "No crash records, death counts, or coordinates may be changed to solve the rendering defect."
+  ],
+  "implementation": {
+    "module": "map-lifecycle.js",
+    "viewport_styles": "map-fix.css",
+    "html_requirements": [
+      "Use viewport-fit=cover.",
+      "Load map-fix.css after styles.css.",
+      "Load map-lifecycle.js after app.js."
+    ]
+  },
+  "acceptance_tests": [
+    "No large unrendered gray region remains after the page settles.",
+    "Map tiles cover the full #map bounding rectangle.",
+    "Rotating an iPad does not leave stale or partial tiles.",
+    "Opening or closing the drawer does not break tiles or overlays.",
+    "The four simulated fatal records and their summaries remain unchanged.",
+    "GeoAware quality gate and JavaScript syntax checks pass."
+  ]
+}
