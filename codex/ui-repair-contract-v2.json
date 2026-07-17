@@ -1,0 +1,41 @@
+{
+  "task": "Finalize the GeoAware UI repair after Project Architect screenshot review",
+  "fixes": [
+    {
+      "id": "wordmark-continuity",
+      "requirement": "Render Ọ̀nàSafe as one continuous Yoruba wordmark. The initial Ọ̀ must never detach from nàSafe.",
+      "files": ["index.html", "styles.css"]
+    },
+    {
+      "id": "remove-public-benchmark-attribution",
+      "requirement": "Remove public-facing OpenCrashMap inspiration or attribution text. Retain ETL GIS Consulting LLC and GeoAware Core governance only.",
+      "files": ["index.html"]
+    },
+    {
+      "id": "visible-live-data",
+      "requirement": "On load, render every accepted simulated fatal record, show displayed deaths, occupied bins, daytime and nighttime totals, and a clickable segment ranking.",
+      "files": ["index.html", "styles.css", "app.js"]
+    },
+    {
+      "id": "actual-spatial-positioning",
+      "requirement": "Use actual GeoJSON coordinates for displayed density groups and a segment projection only for bin membership. Never manufacture records.",
+      "files": ["app.js"]
+    }
+  ],
+  "geoaware_guards": {
+    "required_record_fields": ["provenance", "verification", "coordinate_accuracy_m", "captured_at"],
+    "required_verification": "simulated",
+    "required_severity": "fatal",
+    "may_estimate_deaths": false,
+    "may_multiply_deaths": false,
+    "emergency_action": "FRSC 122",
+    "reduced_motion_support": true
+  },
+  "acceptance": [
+    "No OpenCrashMap promotional attribution is visible.",
+    "Ọ̀nàSafe is visually continuous.",
+    "Initial data totals are non-zero when the governed demo dataset loads.",
+    "Map figures, summary metrics and segment ranking react to filters and bin size.",
+    "Quality gate and Codex review pass before merge."
+  ]
+}
