@@ -49,7 +49,7 @@ jobs:
           print('No known Python dependency vulnerabilities found.')
           PY
       - name: API contract tests
-        run: pytest -q
+        run: python -m pytest -q
       - name: Static application contract
         run: python scripts/validate_static.py
       - name: JavaScript syntax
