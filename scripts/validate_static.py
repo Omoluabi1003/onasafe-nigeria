@@ -59,6 +59,7 @@ def main() -> None:
         longitude, latitude = coordinates
         require(2.0 <= longitude <= 15.0 and 4.0 <= latitude <= 14.5, "Incident coordinate falls outside Nigeria")
         require(props.get("verification") == "simulated", "Demonstration records must remain simulated")
+        require(props.get("provenance") == "simulated_demo", "Demonstration record provenance is required")
         require(props.get("id") and props["id"] not in ids, "Incident IDs must be unique")
         ids.add(props["id"])
         require(float(props.get("coordinate_accuracy_m", 0)) > 0, "Coordinate accuracy is required")
