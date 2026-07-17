@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "product_id": "onasafe-nigeria",
+  "name": "Ọ̀nàSafe Nigeria",
+  "owner": "Paul Iyogun",
+  "organization": "ETL GIS Consulting LLC",
+  "governance": {
+    "inherits_from": "Omoluabi1003/GeoAware-Core",
+    "pinned_commit": "9a205fa287c3cd4bf868f099c0551fc67d8e96b5",
+    "operating_doctrine": "Think in YCOMBINATOR Mode. Execute in GeoAware 80/20 Mode.",
+    "human_final_approval": true
+  },
+  "geoaware_dimensions": ["geography", "exploration", "journey", "guidance"],
+  "pilot": {
+    "corridor": "Lagos-Ibadan Expressway",
+    "duration_days": 90,
+    "country": "Nigeria"
+  },
+  "system_boundaries": {
+    "public_web": "Privacy-safe map, simulated demonstration data, local prototype reporting, FRSC 122 escalation.",
+    "operations_api": "Verification, responder workflow, and audit contract. Persistent production storage remains a later controlled phase.",
+    "restricted_data": "Victim identifiers, phone numbers, number plates, exact home addresses, and graphic evidence must never enter the public surface."
+  },
+  "spatial_contract": {
+    "required_fields": ["provenance", "verification", "coordinate_accuracy_m", "captured_at"],
+    "ai_may_declare_fatality": false,
+    "ai_may_assign_legal_fault": false
+  },
+  "deployment": {
+    "public_surface": "GitHub Pages",
+    "source_branch": "main",
+    "workflow": ".github/workflows/pages.yml"
+  }
+}
