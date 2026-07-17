@@ -18,9 +18,9 @@
   <aside class="control-drawer" aria-label="Road density controls">
     <header class="drawer-header">
       <div class="identity-rule" aria-hidden="true"></div>
-      <div>
+      <div class="identity-copy">
         <p class="product-kicker">GeoAware Core governed</p>
-        <h1>Ọ̀nàSafe Nigeria</h1>
+        <h1><span class="product-wordmark" lang="yo">Ọ̀nàSafe</span> <span>Nigeria</span></h1>
         <p class="product-subtitle">Fatal crash density · simulated pilot data</p>
         <button id="methodBtn" class="method-link" type="button">About the data &amp; method →</button>
       </div>
@@ -32,8 +32,21 @@
         <span aria-hidden="true">⌕</span>
         <input id="roadInput" type="search" value="Lagos–Ibadan Expressway" autocomplete="off" aria-describedby="roadHelp" />
       </div>
-      <p id="roadHelp" class="field-help">Current MVP contains one verified prototype corridor definition.</p>
+      <p id="roadHelp" class="field-help">Current MVP contains one governed prototype corridor definition.</p>
       <button id="loadRoadBtn" class="load-road" type="button"><span aria-hidden="true">⌁</span> Load road</button>
+    </section>
+
+    <section class="live-summary" aria-labelledby="summaryHeading">
+      <div class="summary-heading">
+        <div><p class="mini-label">Visible data</p><h2 id="summaryHeading">Current selection</h2></div>
+        <span class="live-indicator"><i></i> Loaded</span>
+      </div>
+      <div class="summary-grid">
+        <article><strong id="displayedDeaths">0</strong><span>simulated deaths</span></article>
+        <article><strong id="occupiedBins">0</strong><span>occupied bins</span></article>
+        <article><strong id="dayCount">0</strong><span>daytime</span></article>
+        <article><strong id="nightCount">0</strong><span>nighttime</span></article>
+      </div>
     </section>
 
     <section class="control-card" aria-labelledby="dateTimeHeading">
@@ -57,10 +70,15 @@
     </section>
 
     <section class="control-card" aria-labelledby="binHeading">
-      <div class="card-heading"><h2 id="binHeading">Bin size</h2><span class="auto-pill">Auto</span></div>
+      <div class="card-heading"><h2 id="binHeading">Bin size</h2><span class="auto-pill">Interactive</span></div>
       <div class="bin-readout"><strong id="binValue">10 km</strong><span>road segments</span></div>
       <input id="binSlider" type="range" min="5" max="30" step="5" value="10" aria-label="Road segment bin size in kilometres" />
       <div class="range-labels"><span>5 km</span><span>30 km</span></div>
+    </section>
+
+    <section class="segment-card" aria-labelledby="segmentHeading">
+      <div class="card-heading"><h2 id="segmentHeading">Visible segments</h2><span id="segmentTotal" class="segment-total">0</span></div>
+      <div id="segmentList" class="segment-list" aria-live="polite"></div>
     </section>
 
     <section class="safety-card">
@@ -70,7 +88,6 @@
     </section>
 
     <footer class="drawer-footer">
-      <p>Inspired by the verified OpenCrashMap visual reference. No unverified features are implied.</p>
       <p>Developed by ETL GIS Consulting LLC.</p>
     </footer>
   </aside>
@@ -82,7 +99,8 @@
     </div>
     <div class="route-shield" aria-label="Selected road"><span>A1</span></div>
     <div id="map" role="application" aria-label="Interactive Lagos–Ibadan fatal crash density map"></div>
-    <div class="figure-legend"><span class="person-icon" aria-hidden="true">●</span> 1 figure = 1 simulated death</div>
+    <div id="mapEmptyState" class="map-empty-state" hidden>No simulated fatal records match the active filters.</div>
+    <div class="figure-legend"><span class="legend-human" aria-hidden="true"></span> 1 figure = 1 simulated death</div>
     <div class="simulation-banner">SIMULATED PILOT DATA · NOT OFFICIAL CRASH RECORDS</div>
   </section>
 </main>
@@ -91,7 +109,7 @@
   <form method="dialog">
     <div class="dialog-heading"><h2>Data and method</h2><button value="close" aria-label="Close">×</button></div>
     <p>Only records already marked <strong>fatal</strong> in the repository’s simulated Lagos–Ibadan dataset are visualized. Each visible figure represents one simulated death. Records retain provenance, verification state, coordinate accuracy, and capture time under the GeoAware spatial contract.</p>
-    <p>The bin slider groups figures by approximate distance along the pilot corridor. It does not create or estimate additional deaths.</p>
+    <p>The bin slider groups records into road segments. It never creates, estimates, or multiplies deaths.</p>
   </form>
 </dialog>
 
