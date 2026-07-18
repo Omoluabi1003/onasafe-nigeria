@@ -1,17 +1,33 @@
 (() => {
   const MAP_REFIT_PADDING = [54, 54];
   let scheduledFrame = 0;
+  let needsRefit = false;
   let resizeObserver = null;
+  let stabilizationTimeouts = [];
+  let userInteracted = false;
 
-  function stabilizeMap({ refit = false } = {}) {
+  function clearStabilizationTimeouts() {
+    stabilizationTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+    stabilizationTimeouts = [];
+  }
+
+  function stabilizeMap({ refit = false, forceRefit = false } = {}) {
     if (typeof map === 'undefined' || !map) return;
 
-    if (scheduledFrame) cancelAnimationFrame(scheduledFrame);
-    scheduledFrame = requestAnimationFrame(() => {
+    if (refit && (forceRefit || !userInteracted)) {
+      needsRefit = true;
+    }
+
+    if (scheduledFrame) return;
+
+    scheduledFrame = window.requestAnimationFrame(() => {
       scheduledFrame = 0;
+      const performRefit = needsRefit;
+      needsRefit = false;
+
       map.invalidateSize({ animate: false, pan: false });
 
-      if (refit && typeof corridorLayer !== 'undefined' && corridorLayer) {
+      if (performRefit && typeof corridorLayer !== 'undefined' && corridorLayer) {
         const bounds = corridorLayer.getBounds();
         if (bounds?.isValid()) {
           map.fitBounds(bounds, { padding: MAP_REFIT_PADDING, animate: false });
@@ -20,11 +36,13 @@
     });
   }
 
-  function runStabilizationSequence() {
-    stabilizeMap({ refit: true });
-    window.setTimeout(() => stabilizeMap({ refit: true }), 120);
-    window.setTimeout(() => stabilizeMap({ refit: true }), 420);
-    window.setTimeout(() => stabilizeMap({ refit: false }), 900);
+  function runStabilizationSequence({ forceRefit = false } = {}) {
+    clearStabilizationTimeouts();
+
+    stabilizeMap({ refit: true, forceRefit });
+    stabilizationTimeouts.push(window.setTimeout(() => stabilizeMap({ refit: true, forceRefit }), 120));
+    stabilizationTimeouts.push(window.setTimeout(() => stabilizeMap({ refit: true, forceRefit }), 420));
+    stabilizationTimeouts.push(window.setTimeout(() => stabilizeMap({ refit: false }), 900));
   }
 
   function observeMapContainer() {
@@ -35,11 +53,16 @@
     resizeObserver.observe(mapElement);
   }
 
-  window.addEventListener('load', runStabilizationSequence, { once: true });
-  window.addEventListener('pageshow', runStabilizationSequence);
+  function recordUserInteraction() {
+    userInteracted = true;
+  }
+
+  window.addEventListener('load', () => runStabilizationSequence({ forceRefit: true }), { once: true });
+  window.addEventListener('pageshow', () => runStabilizationSequence({ forceRefit: true }));
   window.addEventListener('resize', () => stabilizeMap({ refit: false }), { passive: true });
   window.addEventListener('orientationchange', () => {
-    stabilizationTimeouts.push(window.setTimeout(() => stabilizeMap({ refit: true }), 250));
+    clearStabilizationTimeouts();
+    stabilizationTimeouts.push(window.setTimeout(() => runStabilizationSequence({ forceRefit: true }), 250));
   });
 
   if (window.visualViewport) {
@@ -57,6 +80,13 @@
     });
   }
 
-  observeMapContainer();
-  runStabilizationSequence();
+  const waitForMap = window.setInterval(() => {
+    if (typeof map === 'undefined' || !map) return;
+    window.clearInterval(waitForMap);
+    map.on('dragstart zoomstart', recordUserInteraction);
+    observeMapContainer();
+    runStabilizationSequence({ forceRefit: true });
+  }, 40);
+
+  window.setTimeout(() => window.clearInterval(waitForMap), 5000);
 })();
