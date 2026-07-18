@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#f4f2e9" />
-<meta name="description" content="Ọ̀nàSafe Nigeria road-level fatal crash density explorer." />
-<title>Ọ̀nàSafe Nigeria | Fatal Crash Density</title>
+<meta name="description" content="Ọ̀nàSafe Nigeria road fatality-density explorer with governed simulated data disclosure." />
+<title>Ọ̀nàSafe Nigeria | Road Fatality Density</title>
 <link rel="preconnect" href="https://unpkg.com" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynhAHUlMZVZ8uKAzJQpLIfwEVTg=" crossorigin="" />
 <link rel="stylesheet" href="styles.css" />
@@ -15,105 +15,80 @@
 <body>
 <main class="app-shell">
   <div id="appStatus" class="app-status" role="status" aria-live="polite" hidden></div>
-
-  <aside class="control-drawer" aria-label="Road density controls">
+  <aside class="control-drawer" aria-label="Road fatality-density controls">
     <header class="drawer-header">
       <div class="identity-rule" aria-hidden="true"></div>
       <div class="identity-copy">
         <p class="product-kicker">GeoAware Core governed</p>
         <h1><span class="product-wordmark" lang="yo">Ọ̀nàSafe</span> <span>Nigeria</span></h1>
-        <p class="product-subtitle">Fatal crash density · simulated pilot data</p>
-        <button id="methodBtn" class="method-link" type="button">About the data &amp; method →</button>
+        <p class="product-subtitle">Road safety intelligence by ETL GIS Consulting LLC.</p>
+        <p class="simulation-chip">SIMULATED DEMONSTRATION DATA</p>
       </div>
     </header>
 
-    <section class="control-section">
-      <label class="control-label" for="roadInput">Road</label>
-      <div class="search-field">
-        <span aria-hidden="true">⌕</span>
-        <input id="roadInput" type="search" value="Lagos–Ibadan Expressway" autocomplete="off" aria-describedby="roadHelp" />
-      </div>
-      <p id="roadHelp" class="field-help">Current MVP contains one governed prototype corridor definition.</p>
-      <button id="loadRoadBtn" class="load-road" type="button"><span aria-hidden="true">⌁</span> Load road</button>
+    <section class="control-card" aria-labelledby="dataHeading">
+      <div class="card-heading"><h2 id="dataHeading">Data and Method</h2><button id="methodBtn" class="method-link" type="button">Methodology</button></div>
+      <dl class="source-list">
+        <div><dt>Active dataset</dt><dd id="datasetName"></dd></div>
+        <div><dt>Verification</dt><dd id="verificationStatus"></dd></div>
+        <div><dt>Coverage</dt><dd id="temporalCoverage"></dd></div>
+        <div><dt>Simulation</dt><dd id="simulationStatus"></dd></div>
+        <div><dt>Source</dt><dd id="sourceReference"></dd></div>
+      </dl>
+    </section>
+
+    <section class="control-section" aria-labelledby="roadHeading">
+      <h2 id="roadHeading">Selected Road</h2>
+      <label class="control-label" for="roadSelect">Governed road</label>
+      <select id="roadSelect"><option value="lagos-ibadan-a1">Lagos–Ibadan Expressway · A1</option></select>
+      <p class="field-help">Only roads with governed analytical data are listed.</p>
+    </section>
+
+    <section class="control-card" aria-labelledby="displayHeading">
+      <div class="card-heading"><h2 id="displayHeading">Presentation Controls</h2><span class="road-badge">A1</span></div>
+      <label class="control-label" for="iconMode">Map Icons</label>
+      <select id="iconMode"><option value="persons">Deaths: person figures</option><option value="circles">Deaths: proportional circles</option><option value="density">Fatality density</option></select>
+      <label class="control-label" for="basemap">Base Map</label>
+      <select id="basemap"><option value="streets">Streets</option><option value="light">Light</option></select>
+      <div class="bin-readout"><strong id="binValue">5 km</strong><span>ordered road bins</span></div>
+      <input id="binSlider" type="range" min="5" max="30" step="5" value="5" aria-label="Road segment bin size in kilometres" />
     </section>
 
     <section class="live-summary" aria-labelledby="summaryHeading">
-      <div class="summary-heading">
-        <div><p class="mini-label">Visible data</p><h2 id="summaryHeading">Current selection</h2></div>
-        <span class="live-indicator"><i></i> Loaded</span>
+      <div class="summary-heading"><div><p class="mini-label">Calculated from active road</p><h2 id="summaryHeading">Summary</h2></div><span class="simulation-chip small">SIMULATED</span></div>
+      <div class="summary-grid three">
+        <article><strong id="fatalCrashes">0</strong><span>fatal crashes</span></article>
+        <article><strong id="roadLength">0</strong><span>km road geometry</span></article>
+        <article><strong id="peakBinDeaths">0</strong><span>peak bin deaths</span></article>
       </div>
-      <div class="summary-grid">
-        <article><strong id="displayedDeaths">0</strong><span>simulated deaths</span></article>
-        <article><strong id="occupiedBins">0</strong><span>occupied bins</span></article>
-        <article><strong id="dayCount">0</strong><span>daytime</span></article>
-        <article><strong id="nightCount">0</strong><span>nighttime</span></article>
-      </div>
-    </section>
-
-    <section class="control-card" aria-labelledby="dateTimeHeading">
-      <div class="card-heading"><h2 id="dateTimeHeading">Date &amp; time</h2><span class="road-badge">A1</span></div>
-      <div class="filter-grid">
-        <div>
-          <p class="mini-label">Periods</p>
-          <label class="period-choice active"><input type="radio" name="period" value="all" checked /><span></span><strong>All records</strong><em id="allCount">0</em></label>
-          <label class="period-choice"><input type="radio" name="period" value="mar-apr" /><span></span><strong>Mar–Apr 2026</strong><em id="marAprCount">0</em></label>
-          <label class="period-choice"><input type="radio" name="period" value="may-jun" /><span></span><strong>May–Jun 2026</strong><em id="mayJunCount">0</em></label>
-        </div>
-        <div>
-          <p class="mini-label">Time of day</p>
-          <div class="clock-filter" role="group" aria-label="Time of day filter">
-            <button type="button" data-time="all" class="clock-button active"><strong>All</strong><small>hours</small></button>
-            <button type="button" data-time="day">Day</button>
-            <button type="button" data-time="night">Night</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="control-card" aria-labelledby="binHeading">
-      <div class="card-heading"><h2 id="binHeading">Bin size</h2><span class="auto-pill">Interactive</span></div>
-      <div class="bin-readout"><strong id="binValue">10 km</strong><span>road segments</span></div>
-      <input id="binSlider" type="range" min="5" max="30" step="5" value="10" aria-label="Road segment bin size in kilometres" />
-      <div class="range-labels"><span>5 km</span><span>30 km</span></div>
+      <p class="narrative" id="narrative"></p>
+      <p class="field-help"><span id="totalFatalities">0</span> total simulated deaths; <span id="invalidCount">0</span> invalid records excluded.</p>
     </section>
 
     <section class="segment-card" aria-labelledby="segmentHeading">
-      <div class="card-heading"><h2 id="segmentHeading">Visible segments</h2><span id="segmentTotal" class="segment-total">0</span></div>
+      <div class="card-heading"><h2 id="segmentHeading">Road Bins</h2><span id="segmentTotal" class="segment-total">0</span></div>
       <div id="segmentList" class="segment-list" aria-live="polite"></div>
     </section>
 
-    <section class="safety-card">
-      <strong>Emergency response</strong>
-      <p>This explorer is not a dispatch service. For an active emergency in Nigeria, call FRSC.</p>
-      <a href="tel:122" class="frsc-button">Call FRSC 122</a>
+    <section class="legend-card" aria-labelledby="legendHeading">
+      <h2 id="legendHeading">Legend</h2>
+      <ul><li><b class="line-sample"></b> selected road geometry</li><li><b class="axis-sample"></b> ordered road-bin axis, not latitude/longitude</li><li><span class="legend-human"></span> one person figure equals one death</li><li>Click, tap, Enter, or Space on a stack for details</li><li><span class="simulation-chip small">SIMULATED</span> simulated-data symbol</li></ul>
     </section>
 
-    <footer class="drawer-footer">
-      <p>Developed by ETL GIS Consulting LLC.</p>
-    </footer>
+    <section class="safety-card"><strong>Emergency response</strong><p>This explorer is not a dispatch service. For an active emergency in Nigeria, call FRSC.</p><a href="tel:122" class="frsc-button">Call FRSC 122</a></section>
+    <footer class="drawer-footer"><p>Developed by ETL GIS Consulting LLC.</p><a href="mailto:hello@etlgis.com?subject=Onasafe%20Nigeria%20feedback">Contact / Feedback</a></footer>
   </aside>
-
-  <section class="map-stage" aria-label="Fatal crash density map">
-    <div class="map-toolbar">
-      <button id="drawerToggle" type="button" aria-label="Toggle controls">☰</button>
-      <button class="mode-button active" type="button" aria-label="Two-dimensional map mode">▰ 2D</button>
-    </div>
-    <div class="route-shield" aria-label="Selected road"><span>A1</span></div>
-    <div id="map" role="application" aria-label="Interactive Lagos–Ibadan fatal crash density map"></div>
+  <section class="map-stage" aria-label="Fatality-density map stage">
+    <div class="map-toolbar"><button id="drawerToggle" type="button" aria-label="Toggle controls" aria-expanded="true">☰</button><button id="resetExtent" type="button">Reset road extent</button></div>
+    <div class="route-shield" aria-label="Selected road route badge"><span>A1</span></div>
+    <div id="map" role="application" aria-label="Interactive map of simulated fatality density along Lagos–Ibadan Expressway"></div>
     <div id="mapEmptyState" class="map-empty-state" hidden>No simulated fatal records match the active filters.</div>
-    <div class="figure-legend"><span class="legend-human" aria-hidden="true"></span> 1 figure = 1 simulated death</div>
-    <div class="simulation-banner">SIMULATED PILOT DATA · NOT OFFICIAL CRASH RECORDS</div>
+    <div id="detailPanel" class="detail-panel" hidden aria-live="polite"></div>
+    <div class="figure-legend"><span class="legend-human" aria-hidden="true"></span> 1 figure = 1 simulated death · tap stack for details</div>
+    <div class="simulation-banner">SIMULATED DEMONSTRATION DATA · NOT OFFICIAL CRASH RECORDS</div>
   </section>
 </main>
-
-<dialog id="methodDialog">
-  <form method="dialog">
-    <div class="dialog-heading"><h2>Data and method</h2><button value="close" aria-label="Close">×</button></div>
-    <p>Only records already marked <strong>fatal</strong> in the repository’s simulated Lagos–Ibadan dataset are visualized. Each visible figure represents one simulated death. Records retain provenance, verification state, coordinate accuracy, and capture time under the GeoAware spatial contract.</p>
-    <p>The bin slider groups records into road segments. It never creates, estimates, or multiplies deaths.</p>
-  </form>
-</dialog>
-
+<dialog id="methodDialog"><form method="dialog"><div class="dialog-heading"><h2>Data and method</h2><button value="close" aria-label="Close">×</button></div><p><strong>SIMULATED DEMONSTRATION DATA.</strong> The current public explorer uses only demonstration records from <code>data/demo-crashes.geojson</code>. It does not contain verified government crash records.</p><p>Incident records are validated before rendering. NBS aggregates and state VIO inspection records are explicitly barred from map icons and fatality totals. Road bins are deterministic 5 km segments by default; basemap changes never alter calculations.</p></form></dialog>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="app.js"></script>
 <script src="map-lifecycle.js"></script>
