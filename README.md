@@ -1,5 +1,19 @@
 # Ọ̀nàSafe Nigeria
 
+## Project at a glance
+
+**Category:** Nigerian road crash intelligence and emergency mapping  
+**Purpose:** Map corridor hazards and support privacy-conscious incident reporting and escalation  
+**Intended readers:** Users, developers and project evaluators  
+**Repository:** https://github.com/Omoluabi1003/onasafe-nigeria
+
+**Implementation boundary:** Prototype browser-only reports and simulated demonstration records are not verified live emergency incidents.
+
+The following sections provide the existing development and product details. Confirm live capabilities in source and deployed environments before treating roadmap items as delivered.
+
+---
+
+
 Ọ̀nàSafe Nigeria is a GeoAware Core governed crash-intelligence and emergency-response platform for Nigerian road corridors, beginning with a 90-day Lagos–Ibadan Expressway pilot.
 
 > This repository inherits engineering governance from `Omoluabi1003/GeoAware-Core` at commit `9a205fa287c3cd4bf868f099c0551fc67d8e96b5`.
